@@ -46,14 +46,13 @@ def fetch_trending(trending_type, region, locale, env)
 end
 
 def fetch_suggested_video_ids(env, region, locale)
-  user = env.get("user").as(Invidious::User)
-
+  user = env.get?("user").try &.as(Invidious::User)
   if user.nil?
     return [] of SearchVideo, nil
   end
 
   # Get some new videos from the subscription feed
-  channel_videos, _ = get_subscription_feed(user, 10, 1)
+  channel_videos, _ = get_subscription_feed(user, 5, 1)
   valid_channel_videoids = channel_videos.select do |v|
     # Make sure the video is not live, not a premiere, has a length and has views
     !v.live_now && v.premiere_timestamp.nil? && (v.length_seconds || 0) > 0 && (v.views || 0) > 0
@@ -62,7 +61,7 @@ def fetch_suggested_video_ids(env, region, locale)
   # Get the last 10 watched videos
   watched_video_ids = user.watched.last(10)
 
-  video_ids = watched_video_ids + valid_channel_videoids.sample(4)
+  video_ids = watched_video_ids + valid_channel_videoids.sample(3)
   video_ids = video_ids.uniq
   video_ids = video_ids.reject(&.nil?)
   video_ids = video_ids.reject(&.empty?)
@@ -71,7 +70,7 @@ def fetch_suggested_video_ids(env, region, locale)
     return [] of SearchVideo, nil
   end
 
-  # Fetch related videos for each video and return 10 random ones
+  # Fetch related videos for each video and return 5 random ones
   videos = [] of SearchVideo
   video_ids.each do |video_id|
     video = get_video(video_id)
@@ -96,7 +95,7 @@ def fetch_suggested_video_ids(env, region, locale)
 
     next unless video.related_videos
 
-    related = video.related_videos.sample(10)
+    related = video.related_videos.sample(5)
     related.each do |related_video|
       next unless id = related_video["id"]?
       next unless related_video["view_count"]? && related_video["view_count"]? != 0
