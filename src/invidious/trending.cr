@@ -103,18 +103,17 @@ def fetch_suggested_video_ids(env, region, locale)
     related = video.related_videos.sample(5)
     related.each do |related_video|
       next unless id = related_video["id"]?
-      next unless related_video["view_count"]? && related_video["view_count"]? != 0
       next unless related_video["published"]?
       next unless related_video["length_seconds"]? && related_video["length_seconds"]? != 0
       next if user.preferences.unseen_only && user.watched.includes?(related_video["id"]?)
-      
+
       videos << SearchVideo.new({
         title:              related_video["title"],
         id:                 id,
         author:             related_video["author"],
         ucid:               related_video["ucid"]? || "",
         published:          (Time.parse_rfc3339(related_video["published"].to_s) rescue Time.utc),
-        views:              related_video["view_count"]?.try &.to_i64 || 0_i64,
+        views:              short_text_to_number(related_video["short_view_count"]? || "0").to_i64,
         description_html:   "", # not available
         length_seconds:     related_video["length_seconds"]?.try &.to_i || 0,
         premiere_timestamp: nil,
