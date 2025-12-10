@@ -4,15 +4,12 @@ def fetch_trending(trending_type, region, locale, env)
 
   plid = nil
 
-  browse_id = "FEtrending"
+  browse_id = ""
 
   case trending_type.try &.downcase
-  when "music"
-    params = "4gINGgt5dG1hX2NoYXJ0cw%3D%3D"
   when "gaming"
-    params = "4gIcGhpnYW1pbmdfY29ycHVzX21vc3RfcG9wdWxhcg%3D%3D"
-  when "movies"
-    params = "4gIKGgh0cmFpbGVycw%3D%3D"
+    browse_id = "UCOpNcN46UbXVtpKMrmU4Abg"
+    params = "Egh0cmVuZGluZw%3D%3D"
   when "livestreams"
     browse_id = "UC4R8DWoMoI7CAwX8_LjQHig"
     params = "EgdsaXZldGFikgEDCKEK"
