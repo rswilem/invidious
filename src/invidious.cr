@@ -84,6 +84,7 @@ HTTP_CHUNK_SIZE            = 10485760 # ~10MB
 CURRENT_BRANCH  = {{ "#{`git branch | sed -n '/* /s///p'`.strip}" }}
 CURRENT_COMMIT  = {{ "#{`git rev-list HEAD --max-count=1 --abbrev-commit`.strip}" }}
 CURRENT_VERSION = {{ "#{`git log -1 --format=%ci | awk '{print $1}' | sed s/-/./g`.strip}" }}
+CURRENT_TAG     = {{ "#{`git tag --points-at HEAD`.strip}" }}
 
 # This is used to determine the `?v=` on the end of file URLs (for cache busting). We
 # only need to expire modified assets, so we can use this to find the last commit that changes
@@ -222,19 +223,25 @@ error 500 do |env, exception|
   error_template(500, exception)
 end
 
-static_headers do |env|
-  env.response.headers.add("Cache-Control", "max-age=2629800")
-end
-
 # Init Kemal
-
-public_folder "assets"
 
 Kemal.config.powered_by_header = false
 add_handler FilteredCompressHandler.new
 add_handler APIHandler.new
 add_handler AuthHandler.new
 add_handler DenyFrame.new
+
+{% if compare_versions(Crystal::VERSION, "1.17.0-dev") >= 0 %}
+  Kemal.config.serve_static = false
+  add_handler Invidious::HttpServer::StaticAssetsHandler.new("assets", directory_listing: false)
+{% else %}
+  public_folder "assets"
+
+  static_headers do |env|
+    env.response.headers.add("Cache-Control", "max-age=2629800")
+  end
+{% end %}
+
 add_context_storage_type(Array(String))
 add_context_storage_type(Preferences)
 add_context_storage_type(Invidious::User)
@@ -249,6 +256,8 @@ Kemal.config.app_name = "Invidious"
 {% end %}
 
 Kemal.run do |config|
+  config.server.not_nil!.max_request_line_size = 16384
+
   if socket_binding = CONFIG.socket_binding
     File.delete?(socket_binding.path)
     # Create a socket and set its desired permissions

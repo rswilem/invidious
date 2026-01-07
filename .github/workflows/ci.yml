@@ -38,11 +38,11 @@ jobs:
       matrix:
         stable: [true]
         crystal:
-          - 1.12.2
-          - 1.13.3
           - 1.14.1
           - 1.15.1
           - 1.16.3
+          - 1.17.1
+          - 1.18.2
         include:
           - crystal: nightly
             stable: false
@@ -63,7 +63,7 @@ jobs:
           crystal: ${{ matrix.crystal }}
 
       - name: Cache Shards
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ./lib
@@ -139,7 +139,7 @@ jobs:
           crystal: latest
 
       - name: Cache Shards
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ./lib
