@@ -46,4 +46,3 @@ def fetch_trending(trending_type, region, locale)
   # Deduplicate items before returning results
   return extracted.select(SearchVideo | ProblematicTimelineItem).uniq!(&.id), plid
 end
-
