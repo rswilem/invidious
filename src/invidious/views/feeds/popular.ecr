@@ -12,7 +12,8 @@
 <%= rendered "components/feed_menu" %>
 
 <div class="pure-g">
-<% popular_videos.each do |item| %>
+<% recommendations, _ = fetch_user_video_recommendations(env, nil, locale) %>
+<% recommendations.each do |item| %>
     <%= rendered "components/item" %>
 <% end %>
 </div>

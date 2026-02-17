@@ -53,7 +53,7 @@ module Invidious::Routes::Feeds
     region ||= preferences.region
 
     begin
-      trending, plid = fetch_trending(trending_type, region, locale, env)
+      trending, plid = fetch_trending(trending_type, region, locale)
     rescue ex
       return error_template(500, ex)
     end

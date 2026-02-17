@@ -41,6 +41,7 @@ require "./invidious/videos/*"
 
 require "./invidious/jsonify/**"
 
+require "./invidious/recommendations"
 require "./invidious/*"
 require "./invidious/comments/*"
 require "./invidious/channels/*"
