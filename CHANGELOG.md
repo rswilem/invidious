@@ -2,6 +2,145 @@
 
 ## vX.Y.0 (future)
 
+
+## v2.20260723.0
+
+### Wrap-up
+
+This release hardens security, adds an instance option to disable API endpoints, and fixes YouTube backend changes that broke video metadata and playback. A cross-user playlist deletion vulnerability was closed, and videos are no longer incorrectly marked as upcoming.
+
+Instance owners gain a new configuration flag to disable API endpoints that are easy to abuse, a reduced backoff in the channel refresh job when no errors occur, and an updated User-Agent header for YouTube requests. The OCI image bumps OpenSSL to 3.6.3, and the Docker image moves to Crystal 1.20.3.
+
+Developer experience improves with the ability to release directly from GitHub Actions, enhanced issue/PR templates with an AI policy compliance field, and a new `AI_POLICY.md` document. Dependency bumps keep CI current with `int128/docker-manifest-create-action` 2.25.0 and `actions/cache` 6.
+
+### New features & important changes
+#### For Users
+  - No user-facing changes in this release.
+
+#### For instance owners
+  - A new configuration option allows disabling API endpoints that are easy to abuse (#5630)
+  - The `RefreshChannelsJob` backoff is reduced when no errors occur, improving channel refresh efficiency (#5759)
+  - The User-Agent header for YouTube requests was updated to maintain compatibility (#5794)
+  - OpenSSL was updated to 3.6.3 in the OCI image (#5808)
+  - The Docker image now uses Crystal 1.20.3 (#5797)
+
+#### For developers
+  - Releases can now be triggered directly from a GitHub Action workflow (#5823)
+  - Issue and PR templates were reworded and enhanced, and a field for AI policy compliance was added (#5804, #5803)
+  - An `AI_POLICY.md` document was created to clarify the project's stance on AI-generated contributions (#5791)
+  - CI dependencies were bumped: `int128/docker-manifest-create-action` to 2.25.0 and `actions/cache` to 6 (#5807, #5793)
+
+### Bugs fixed
+#### User-side
+  - A security issue that allowed playlist deletion across different users was fixed (#5790)
+  - Videos are no longer incorrectly labelled as `isUpcoming = true` due to a YouTube backend change (#5800)
+  - YouTube backend API changes that caused playback and metadata issues were addressed (#5818, #5819)
+
+### Full list of pull requests merged since the last release (newest first)
+
+* feat: add ability to release from github action (https://github.com/iv-org/invidious/pull/5823, by @unixfox)
+* youtube backend api fix (https://github.com/iv-org/invidious/pull/5818, by @gabe4278)
+* Hotfix - Fix YouTube change (https://github.com/iv-org/invidious/pull/5819, by @bunchy7ss)
+* chore: update openssl to 3.6.3 in OCI (https://github.com/iv-org/invidious/pull/5808, by @Fijxu)
+* chore(deps): bump int128/docker-manifest-create-action from 2.22.0 to 2.25.0 (https://github.com/iv-org/invidious/pull/5807, by @dependabot[bot])
+* Various enhancements and rewording to the issues/PRs templates (https://github.com/iv-org/invidious/pull/5804, by @TheFrenchGhosty)
+* Add a field for AI policy compliance in the issues/PRs templates (https://github.com/iv-org/invidious/pull/5803, by @TheFrenchGhosty)
+* Fix videos being incorrectly labelled as isUpcoming = true (https://github.com/iv-org/invidious/pull/5800, by @absidue)
+* chore(deps): bump 84codes/crystal from 1.20.2-alpine to 1.20.3-alpine in /docker (https://github.com/iv-org/invidious/pull/5797, by @dependabot[bot])
+* Create AI_POLICY.md (https://github.com/iv-org/invidious/pull/5791, by @TheFrenchGhosty)
+* Add option to disable easy to abuse API endpoints (https://github.com/iv-org/invidious/pull/5630, by @Fijxu)
+* [RefreshChannelsJob] Reduce backoff if no errors occur (https://github.com/iv-org/invidious/pull/5759, by @unrealtournament)
+* fix: security issue playlist deletion cross user (https://github.com/iv-org/invidious/pull/5790, by @unixfox)
+* chore: update User-Agent header for Youtube requests (https://github.com/iv-org/invidious/pull/5794, by @Fijxu)
+* chore(deps): bump actions/cache from 5 to 6 (https://github.com/iv-org/invidious/pull/5793, by @dependabot[bot])
+
+## v2.20260626.0
+
+### Wrap-up
+
+This release hardens playlists, channels, and search, adds a privacy option for searches, and modernizes the packaging and CI pipeline.
+
+Searches can now be submitted via `POST` so queries do not leak into server logs or browser history, Invidious cookies work across alternative domains, and "Watch on YouTube" / embed redirects use the correct timestamp and host. Playlist and channel parsing issues got fixed: outdated playlist parsing that hid all videos, paid course videos breaking imports, RSS feeds exposing private playlists without auth, broken author verification badges, and channel videos/playlists not loading from search. Thumbnail paths `/pl_c` / `/tvfilm_banner` are now supported, YouTube comments that were written in Japanese, Chinese, Korean and probably other languages do not longer swallows the last character when an emoji is present in the comment, and the search filters dropped the deprecated "sort by rating/date" options.
+
+Packaging moves Docker builds to the 84codes Crystal compiler image, updates OpenSSL to 3.6.2 and Crystal to 1.20.x in OCI, bumps Alpine to 3.24, and unifies the ARM64 and AMD64 Dockerfiles. Developers benefit from continued encapsulation of constants/helpers/translation/video-parser logic into dedicated modules, an `api/v1/channels.cr` lint pass, trailing-whitespace cleanup, and a sweep of dependency and GitHub Actions bumps.
+
+### New features & important changes
+#### For Users
+  - Searches can be submitted through `POST` requests so queries stay out of URLs, server logs and browser history (#5551)
+  - Invidious cookies are honoured across alternative configured domains (#5647)
+  - Embed and "Watch on YouTube" redirects use the correct `t`/`start` parameter and the `www.youtube.com` host consistently (#5660, #5768)
+  - The `referrerpolicy`/`noreferrer` handling was corrected now that YouTube requires referrers on embeds (#5642)
+  - The listen button on the title updates its elapsed time, and the deprecated "sort by rating/date" search filter options were removed (#5625, #5629)
+
+#### For instance owners
+  - Docker builds switched to the 84codes Crystal compiler container image, and OCI images were updated to Crystal 1.20.x with OpenSSL 3.6.2 (#5473, #5692)
+  - Alpine was bumped to 3.24 in the Docker image (#5778)
+  - ARM64 and AMD64 Dockerfiles were unified into a single workflow (#5700)
+
+#### For developers
+  - Constants and functions were encapsulated into dedicated `I18n`, `Helpers`, `Invidious::Videos::Parser` and `Invidious::Videos::Clip` modules (#5637, #5639, #5745)
+  - `api/v1/channels.cr` received a lint pass and trailing whitespaces were removed from the codebase (#5693, #5634)
+  - CI bumped the Crystal version matrix and displayed compile progress/stats, and the `crystal-lang/install-crystal` action was updated (#5691, #5696, #5703, #5686)
+
+### Bugs fixed
+#### User-side
+  - Playlists showed no videos because of outdated playlist parsing; this is fixed along with paid course videos breaking the importer (#5774, #5207)
+  - Private Invidious playlists were reachable through RSS feeds without authentication (#5776)
+  - Channel videos and playlists failed to load from search, and channel author verification was broken (#5736, #5751)
+  - A missing `collectionThumbnailViewModel` hash key crashed channel browsing (#5725)
+  - The `quality=medium` query parameter was appended to videos about to premiere (#5755)
+  - YouTube/Invidious links did not rewind their timestamp when playback position was rewound (#5601)
+  - The last character of a comment was lost when the comment contained emoji (#5587)
+  - Playlist RSS `watch` URLs only joined params with `&` when params were present, and thumbnail paths `/pl_c` and `/tvfilm_banner` are now supported (#5646, #5742)
+
+#### For instance owners
+  - Docker/OCI builds keep current with Crystal 1.20.1, OpenSSL 3.6.2, Alpine 3.24 and the unified multi-arch Dockerfile (#5703, #5701, #5778, #5700)
+
+#### For developers
+  - Dependency and GitHub Actions bumps kept CI current: `docker/login-action`, `build-push-action`, `metadata-action`, `setup-buildx-action`, `int128/docker-manifest-create-action` and `crystal-lang/install-crystal` (#5705, #5766, #5721, #5686, #5661, #5662, #5663, #5664)
+
+### Full list of pull requests merged since the last release (newest first)
+
+* fix: fix playlists not showing any videos due to outdated playlist parsing (https://github.com/iv-org/invidious/pull/5774, by @Fijxu)
+* chore(deps): bump alpine from 3.23 to 3.24 in /docker (https://github.com/iv-org/invidious/pull/5778, by @dependabot[bot])
+* fix: fix private invidious playlists on rss feeds from being fetched without authentication (https://github.com/iv-org/invidious/pull/5776, by @Fijxu)
+* Use "www.youtube.com" consistently (https://github.com/iv-org/invidious/pull/5768, by @janmoesen)
+* chore(deps): bump int128/docker-manifest-create-action from 2.21.0 to 2.22.0 (https://github.com/iv-org/invidious/pull/5766, by @dependabot[bot])
+* Add support for alternative domains for Invidious cookies (https://github.com/iv-org/invidious/pull/5647, by @Fijxu)
+* Only include '&' if params are present in `watch` urls for playlist RSS (https://github.com/iv-org/invidious/pull/5646, by @Fijxu)
+* Dockerfile: Switch to 84codes crystal compiler container image (https://github.com/iv-org/invidious/pull/5473, by @Fijxu)
+* fix: Do not append query params `quality=medium` to videos that are about to premiere (https://github.com/iv-org/invidious/pull/5755, by @Fijxu)
+* Fix Youtube and Invidious links not rewinding their time when video playback position is rewound (https://github.com/iv-org/invidious/pull/5601, by @Fijxu)
+* feat: Add support for POST requests on searches for privacy (https://github.com/iv-org/invidious/pull/5551, by @Fijxu)
+* Fix last character disappearance if emoji are in comment (https://github.com/iv-org/invidious/pull/5587, by @shiny-comic)
+* Encapsulate videos parser and clip functions inside it's own `Invidious::Videos::Parser` and `Invidious::Videos::Clip` module (https://github.com/iv-org/invidious/pull/5745, by @Fijxu)
+* fix: fix author verification in channels (https://github.com/iv-org/invidious/pull/5751, by @Fijxu)
+* Add support for `/pl_c` and `/tvfilm_banner` paths (thumbnails used in some playlists) (https://github.com/iv-org/invidious/pull/5742, by @Fijxu)
+* fix: fix channel videos and playlists on searches (https://github.com/iv-org/invidious/pull/5736, by @Fijxu)
+* fix: fix `Missing hash key: "collectionThumbnailViewModel"` (https://github.com/iv-org/invidious/pull/5725, by @Fijxu)
+* chore(deps): bump int128/docker-manifest-create-action from 2.20.0 to 2.21.0 (https://github.com/iv-org/invidious/pull/5721, by @dependabot[bot])
+* chore: update openssl to 3.6.2 in OCI (https://github.com/iv-org/invidious/pull/5701, by @Fijxu)
+* Bump int128/docker-manifest-create-action from 2.19.0 to 2.20.0 (https://github.com/iv-org/invidious/pull/5705, by @dependabot[bot])
+* CI: Unify ARM64 and AMD64 Dockerfiles (https://github.com/iv-org/invidious/pull/5700, by @Fijxu)
+* CI: update Crystal 1.20.0 to 1.20.1 in ci.yml matrix (https://github.com/iv-org/invidious/pull/5703, by @Fijxu)
+* CI: display progress and stats when compiling Invidious in ci.yml matrix (https://github.com/iv-org/invidious/pull/5696, by @Fijxu)
+* CI: Bump Crystal version matrix (https://github.com/iv-org/invidious/pull/5691, by @Fijxu)
+* chore: update Crystal to 1.20.0 in OCI (https://github.com/iv-org/invidious/pull/5692, by @Fijxu)
+* player: Use correct time parameter for YouTube embed redirects (https://github.com/iv-org/invidious/pull/5660, by @radmorecameron)
+* chore: lint api/v1/channels.cr (https://github.com/iv-org/invidious/pull/5693, by @Fijxu)
+* Encapsulate helpers constants and functions inside it's own `Helpers` module (https://github.com/iv-org/invidious/pull/5639, by @Fijxu)
+* Encapsulate translation constants and functions inside it's own `I18n` module (https://github.com/iv-org/invidious/pull/5637, by @Fijxu)
+* Bump crystal-lang/install-crystal from 1.9.1 to 1.9.2 (https://github.com/iv-org/invidious/pull/5686, by @dependabot[bot])
+* Playlists: fix parsing error when some videos are paid for in a course (https://github.com/iv-org/invidious/pull/5207, by @ChunkyProgrammer)
+* Bump docker/login-action from 3 to 4 (https://github.com/iv-org/invidious/pull/5661, by @dependabot[bot])
+* Bump docker/build-push-action from 6 to 7 (https://github.com/iv-org/invidious/pull/5662, by @dependabot[bot])
+* Bump docker/metadata-action from 5 to 6 (https://github.com/iv-org/invidious/pull/5663, by @dependabot[bot])
+* Bump docker/setup-buildx-action from 3 to 4 (https://github.com/iv-org/invidious/pull/5664, by @dependabot[bot])
+* Remove noreferrer since youtube now requires referrers on embeds (https://github.com/iv-org/invidious/pull/5642, by @ashleyirispuppy143)
+* Remove trailing whitespaces from codebase (https://github.com/iv-org/invidious/pull/5634, by @Fijxu)
+* Add title listen button time updates (https://github.com/iv-org/invidious/pull/5625, by @JeroenBoersma)
+* Remove sort by rating and date in video search filters (https://github.com/iv-org/invidious/pull/5629, by @Fijxu)
+
 ## v2.20260207.0
 
 ### Wrap-up
