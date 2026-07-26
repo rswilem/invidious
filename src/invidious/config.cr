@@ -130,6 +130,17 @@ class Config
   # "Popular" feed when a request carries no session (e.g. API clients that
   # don't send the SID cookie). Only useful on single-user instances.
   property popular_fallback_user : String? = nil
+  # Hours of the day (0-23, server local time) at which PullRecommendationsJob
+  # rebuilds the recommendation pools. Also runs once at startup, because the
+  # pools are not persisted across restarts.
+  property recommendations_refresh_hours : Array(Int32) = [10, 19]
+  # Maximum number of videos PullRecommendationsJob may fetch from YouTube per
+  # rebuild, across all users. Each fetch costs two upstream requests (/player
+  # and /next). Cached seeds are free, but the `videos` table only holds six
+  # hours, so a rebuild normally fetches most of its seeds.
+  property recommendations_fetch_budget : Int32 = 100
+  # Maximum number of videos returned by the personalized "Popular" feed.
+  property recommendations_max_results : Int32 = 100
   property captcha_enabled : Bool = true
   property login_enabled : Bool = true
   property registration_enabled : Bool = true

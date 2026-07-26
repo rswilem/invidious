@@ -181,6 +181,7 @@ end
 
 if CONFIG.popular_enabled
   Invidious::Jobs.register Invidious::Jobs::PullPopularVideosJob.new(PG_DB)
+  Invidious::Jobs.register Invidious::Jobs::PullRecommendationsJob.new(PG_DB)
 end
 
 NOTIFICATION_CHANNEL = ::Channel(VideoNotification).new(32)

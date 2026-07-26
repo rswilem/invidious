@@ -336,6 +336,47 @@ https_only: false
 #popular_fallback_user: me@example.com
 
 ##
+## Hours of the day, in server local time, at which the personalized "Popular"
+## feed pool is rebuilt in the background by PullRecommendationsJob. Also runs
+## once at startup, since the pool is held in memory only.
+##
+## The default rebuilds mid-morning and early evening, so the evening feed
+## reflects what was watched during the day rather than yesterday.
+##
+## Accepted values: a list of hours, each 0-23
+## Default: [10, 19]
+##
+#recommendations_refresh_hours: [10, 19]
+
+##
+## Maximum number of videos PullRecommendationsJob may fetch from YouTube per
+## rebuild, across all users. Each fetch costs two upstream requests (/player
+## and /next), spaced one second apart. With the two default rebuild hours the
+## ceiling is 400 requests per day, and a rebuild takes two to three minutes.
+##
+## Seeds still present in the local 'videos' table are free, but that table is
+## only a six hour cache, so a rebuild will normally fetch most of its seeds.
+##
+## Keep this in step with the seed counts in PullRecommendationsJob: the default
+## matches the 100 seeds one user contributes (60 from the watch history, 40 from
+## the subscription feed). Seeds beyond the budget are never fetched, and budget
+## beyond the seeds is never spent, so raising only one of the two does nothing.
+##
+## Accepted values: a positive integer
+## Default: 100
+##
+#recommendations_fetch_budget: 100
+
+##
+## Maximum number of videos returned by the personalized "Popular" feed. The
+## pool is larger than this, so each reload returns a different selection.
+##
+## Accepted values: a positive integer
+## Default: 100
+##
+#recommendations_max_results: 100
+
+##
 ## Enable/Disable statstics (available at /api/v1/stats).
 ## The following data is available:
 ##   - Software name ("invidious") and version+branch (same data as
