@@ -126,6 +126,10 @@ class Config
   # Subscribe to channels using PubSubHubbub (requires domain, hmac_key)
   property use_pubsub_feeds : Bool | Int32 = false
   property popular_enabled : Bool = true
+  # Email of the user whose recommendations are used for the personalized
+  # "Popular" feed when a request carries no session (e.g. API clients that
+  # don't send the SID cookie). Only useful on single-user instances.
+  property popular_fallback_user : String? = nil
   property captcha_enabled : Bool = true
   property login_enabled : Bool = true
   property registration_enabled : Bool = true

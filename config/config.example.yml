@@ -321,6 +321,21 @@ https_only: false
 #popular_enabled: true
 
 ##
+## Email of the account used to build the personalized "Popular" feed when a
+## request has no session. External API clients (e.g. Yattee) call
+## /api/v1/popular without the SID cookie, so /popular would otherwise be
+## empty for them.
+##
+## WARNING: when set, anyone who can reach this instance sees this account's
+## recommendations, which are derived from its watch history and
+## subscriptions. Only set this on a private, single-user instance.
+##
+## Accepted values: an email address of an existing user
+## Default: <none>
+##
+#popular_fallback_user: me@example.com
+
+##
 ## Enable/Disable statstics (available at /api/v1/stats).
 ## The following data is available:
 ##   - Software name ("invidious") and version+branch (same data as

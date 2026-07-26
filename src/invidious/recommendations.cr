@@ -1,5 +1,13 @@
 def fetch_user_video_recommendations(env, region, locale)
   user = env.get?("user").try &.as(Invidious::User)
+
+  # API clients such as Yattee call /api/v1/popular without the SID cookie, so
+  # there is no session to personalize from. On a single-user instance we can
+  # fall back to a configured account instead of returning nothing.
+  if user.nil? && (fallback_email = CONFIG.popular_fallback_user)
+    user = Invidious::Database::Users.select(email: fallback_email)
+  end
+
   if user.nil?
     return [] of SearchVideo, nil
   end
