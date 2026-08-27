@@ -364,10 +364,14 @@ https_only: false
 ## Seeds still present in the local 'videos' table are free, but that table is
 ## only a six hour cache, so a rebuild will normally fetch most of its seeds.
 ##
-## Keep this in step with the seed counts in PullRecommendationsJob: the default
-## matches the 100 seeds one user contributes (60 from the watch history, 40 from
-## the subscription feed). Seeds beyond the budget are never fetched, and budget
-## beyond the seeds is never spent, so raising only one of the two does nothing.
+## Keep this in step with the seed counts in PullRecommendationsJob: seeds beyond
+## the budget are never fetched, and budget beyond the seeds is never spent, so
+## raising only one of the two does nothing.
+##
+## The budget is split between the job's two hops, currently 65% for the first
+## (the user's watch history and subscription feed, 100 seeds by default) and 35%
+## held back for the second (re-expanding the best candidates found by the
+## first). Raising the budget deepens both.
 ##
 ## Accepted values: a positive integer
 ## Default: 100

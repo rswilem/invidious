@@ -11,6 +11,14 @@
 # subscribed to or one the user actually watches, how fresh it is, and how it
 # performed. See `rank` for the weights.
 #
+# Collection runs in two hops. The first takes the user's watch history and
+# subscription feed as seeds. The second re-expands the best candidates from the
+# first as seeds in their own right, which is what turns co-occurrence from a
+# per-seed tally into a graph signal: it can reach the video several of the
+# user's interests converge on, rather than only direct neighbours of what they
+# already watched. Second-hop contributions are damped, since those videos were
+# never actually watched.
+#
 # Note that the local `videos` table is only a six hour cache: ClearExpiredItems
 # deletes anything older than that. So a daily rebuild has to fetch most of its
 # seeds, which is what `recommendations_fetch_budget` bounds. Fetches are spaced
@@ -21,9 +29,10 @@ class Invidious::Jobs::PullRecommendationsJob < Invidious::Jobs::BaseJob
   POOLS = Atomic.new({} of String => Array(SearchVideo))
 
   # Number of seed videos taken from the user's watch history, newest first.
-  # Together with SUBSCRIPTION_SEEDS this should stay in step with
-  # `recommendations_fetch_budget`: seeds beyond the budget are never fetched,
-  # and budget beyond the seeds is never spent.
+  # Together with SUBSCRIPTION_SEEDS this should stay in step with the first
+  # hop's share of `recommendations_fetch_budget` (see HOP2_BUDGET_SHARE):
+  # seeds beyond the budget are never fetched, and budget beyond the seeds is
+  # never spent.
   private HISTORY_SEEDS = 60
   # Number of seed videos taken from the user's subscription feed.
   private SUBSCRIPTION_SEEDS = 40
@@ -51,6 +60,18 @@ class Invidious::Jobs::PullRecommendationsJob < Invidious::Jobs::BaseJob
   # over the feed.
   private MAX_PER_CHANNEL = 5
 
+  # Number of top-ranked first-hop candidates re-expanded as second-hop seeds.
+  private HOP2_SEEDS = 40
+  # Weight multiplier for what a second-hop seed recommends. Kept well below
+  # 1.0: these videos were never watched, so their neighbours are a weaker
+  # signal, and undamped they would drag the pool towards generic popular
+  # content, which is exactly what the sidebar is padded with.
+  private HOP2_DAMPING = 0.4
+  # Fraction of the fetch budget held back for the second hop, so a long watch
+  # history can't spend all of it on first-hop seeds. The total spend per
+  # rebuild is unchanged: this only decides how it is split.
+  private HOP2_BUDGET_SHARE = 0.35
+
   # A candidate video plus the accumulated weight of the seeds that recommended
   # it. Scoring happens after every seed is in, in `rank`.
   private class Candidate
@@ -66,6 +87,9 @@ class Invidious::Jobs::PullRecommendationsJob < Invidious::Jobs::BaseJob
 
   # Remaining number of videos that may be fetched from YouTube this rebuild.
   @budget : Int32 = 0
+  # Level `@budget` may not be spent below, used to reserve the second hop's
+  # share while the first hop is running.
+  @budget_floor : Int32 = 0
 
   def initialize(@db)
   end
@@ -131,7 +155,7 @@ class Invidious::Jobs::PullRecommendationsJob < Invidious::Jobs::BaseJob
       pool = previous[email]? || pool if pool.empty?
       pools[email] = pool unless pool.empty?
 
-      LOGGER.debug("PullRecommendationsJob: #{pool.size} videos pooled for #{email}")
+      LOGGER.info("PullRecommendationsJob: #{pool.size} videos pooled for #{email}")
     end
 
     POOLS.set(pools)
@@ -146,9 +170,16 @@ class Invidious::Jobs::PullRecommendationsJob < Invidious::Jobs::BaseJob
     # Channels the seeds came from, which is a decent proxy for what the user
     # actually watches as opposed to what they once subscribed to.
     seed_authors = Set(String).new
+    # Seeds already spent, so the second hop doesn't pay to fetch them again.
+    seeded = Set(String).new
+
+    # Hold the second hop's share back before the first hop starts spending.
+    @budget_floor = (CONFIG.recommendations_fetch_budget * HOP2_BUDGET_SHARE).to_i
 
     seed_ids(user).each_with_index do |seed_id, index|
       begin
+        seeded << seed_id
+
         video = fetch_seed(seed_id)
         next if video.nil?
         next unless video.video_type == VideoType::Video
@@ -162,6 +193,34 @@ class Invidious::Jobs::PullRecommendationsJob < Invidious::Jobs::BaseJob
         LOGGER.error("PullRecommendationsJob: seed #{seed_id} failed: #{ex.message}")
       end
     end
+
+    hop1_candidates = candidates.size
+
+    # Second hop. Ranking first means the expansion starts from the strongest
+    # candidates and inherits the per-channel cap, so the second generation is
+    # as diverse as the first rather than 40 videos from one channel.
+    @budget_floor = 0
+
+    hop2_seeds = rank(candidates, subscriptions, seed_authors)
+      .reject { |video| seeded.includes?(video.id) }
+      .first(HOP2_SEEDS)
+
+    hop2_seeds.each_with_index do |seed, index|
+      begin
+        video = fetch_seed(seed.id)
+        next if video.nil?
+        next unless video.video_type == VideoType::Video
+
+        # Deliberately not added to `seed_authors`: this video was never
+        # watched, so its channel says nothing about the user's taste.
+        collect(candidates, video, HOP2_DAMPING * seed_weight(index), watched)
+      rescue ex
+        LOGGER.error("PullRecommendationsJob: hop 2 seed #{seed.id} failed: #{ex.message}")
+      end
+    end
+
+    LOGGER.info("PullRecommendationsJob: #{hop1_candidates} candidates after hop 1, \
+      #{candidates.size} after expanding #{hop2_seeds.size} of them")
 
     return rank(candidates, subscriptions, seed_authors)
   end
@@ -287,7 +346,7 @@ class Invidious::Jobs::PullRecommendationsJob < Invidious::Jobs::BaseJob
     cached = Invidious::Database::Videos.select(id)
     return cached if cached && cached.schema_version == Video::SCHEMA_VERSION
 
-    return nil if @budget <= 0
+    return nil if @budget <= @budget_floor
     @budget -= 1
 
     video = get_video(id)
