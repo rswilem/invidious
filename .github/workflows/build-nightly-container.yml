@@ -15,8 +15,8 @@ on:
       - .github/ISSUE_TEMPLATE/*
       - kubernetes/**
       # Nix development files that are not used here.
-      - "*.nix"
-      - flake.lock
+      - .envrc
+      - "nix/**"
 
 jobs:
   release:
@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -89,7 +89,7 @@ jobs:
 
       # https://github.com/marketplace/actions/docker-manifest-create-action
       - name: Create and push manifest
-        uses: int128/docker-manifest-create-action@v2.26.0
+        uses: int128/docker-manifest-create-action@v2
         with:
           push: true
           tags: quay.io/invidious/invidious:master
